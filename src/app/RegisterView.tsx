@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { authService } from '../services/authServices.ts';
+import { authService } from '../services/authServices';
+import {Button, Input} from '../components/ui';
+import { C, T } from '../styles/theme';
 
 interface RegisterViewProps {
     goToLogin: () => void;
@@ -10,6 +12,7 @@ export default function RegisterView({
                                      }: RegisterViewProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -20,6 +23,7 @@ export default function RegisterView({
 
         try {
             setLoading(true);
+            setMessage('');
 
             const { error } =
                 await authService.register(
@@ -48,72 +52,99 @@ export default function RegisterView({
     return (
         <div
             style={{
-                maxWidth: 400,
-                margin: '80px auto',
+                minHeight: '100vh',
+                background: C.black,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 24,
             }}
         >
-            <h1>Registro</h1>
-
-            <form onSubmit={handleRegister}>
-                <input
-                    type="email"
-                    value={email}
-                    onChange={(e) =>
-                        setEmail(e.target.value)
-                    }
-                    placeholder="Email"
-                />
-
-                <br />
-                <br />
-
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) =>
-                        setPassword(e.target.value)
-                    }
-                    placeholder="Password"
-                />
-
-                <br />
-                <br />
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {loading
-                        ? 'Creando cuenta...'
-                        : 'Crear cuenta'}
-                </button>
-            </form>
-
-            {message && (
-                <p
-                    style={{
-                        marginTop: 12,
-                    }}
-                >
-                    {message}
-                </p>
-            )}
-
             <div
                 style={{
-                    marginTop: 20,
+                    ...T.card,
+                    width: 420,
+                    maxWidth: '100%',
                 }}
             >
-                <p>
-                    ¿Ya tenés cuenta?
+                <h1 style={T.pageHead}>
+                    Crear cuenta
+                </h1>
+
+                <p style={T.pageSub}>
+                    Registrá tu comercio en Pymen
                 </p>
 
-                <button
-                    type="button"
-                    onClick={goToLogin}
+                <form
+                    onSubmit={handleRegister}
+                    style={{
+                        marginTop: 24,
+                    }}
                 >
-                    Iniciar sesión
-                </button>
+                    <Input
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) =>
+                            setEmail(e.target.value)
+                        }
+                        placeholder="Email"
+                    />
+
+                    <Input
+                        label="Contraseña"
+                        type="password"
+                        value={password}
+                        onChange={(e) =>
+                            setPassword(e.target.value)
+                        }
+                        placeholder="Contraseña"
+                    />
+
+                    {message && (
+                        <p
+                            style={{
+                                color: message.includes('Error')
+                                    ? C.red
+                                    : C.lime,
+                                fontSize: 13,
+                                marginBottom: 16,
+                            }}
+                        >
+                            {message}
+                        </p>
+                    )}
+
+                    <Button
+                        type="submit"
+                        variant="lime"
+                        fullWidth
+                        disabled={loading}
+                    >
+                        {loading
+                            ? 'Creando cuenta...'
+                            : 'Crear cuenta'}
+                    </Button>
+                </form>
+
+                <div
+                    style={{
+                        marginTop: 24,
+                        textAlign: 'center',
+                    }}
+                >
+                    <p style={T.pageSub}>
+                        ¿Ya tenés cuenta?
+                    </p>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={goToLogin}
+                    >
+                        Iniciar sesión
+                    </Button>
+                </div>
             </div>
         </div>
     );

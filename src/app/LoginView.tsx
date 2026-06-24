@@ -1,109 +1,136 @@
-import { useState } from 'react';
-import { authService } from '../services/authServices.ts';
+import { useState } from 'react'
+import { authService } from '../services/authServices'
+import {Button, Input} from '../components/ui'
+import { C, T } from '../styles/theme'
 
 interface LoginViewProps {
-    goToRegister: () => void;
+    goToRegister: () => void
 }
 
 export default function LoginView({
                                       goToRegister,
                                   }: LoginViewProps) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
 
     async function handleLogin(
         e: React.FormEvent
     ) {
-        e.preventDefault();
+        e.preventDefault()
 
         try {
-            setLoading(true);
-            setError('');
+            setLoading(true)
+            setError('')
 
             const { error } =
                 await authService.login(
                     email,
                     password
-                );
+                )
 
-            if (error) throw error;
-
+            if (error) throw error
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message)
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
     }
 
     return (
         <div
             style={{
-                maxWidth: 400,
-                margin: '80px auto',
+                minHeight: '100vh',
+                background: C.black,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 24,
             }}
         >
-            <h1>Login</h1>
-
-            <form onSubmit={handleLogin}>
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) =>
-                        setEmail(e.target.value)
-                    }
-                />
-
-                <br />
-                <br />
-
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) =>
-                        setPassword(e.target.value)
-                    }
-                />
-
-                <br />
-                <br />
-
-                {error && (
-                    <p style={{ color: 'red' }}>
-                        {error}
-                    </p>
-                )}
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {loading
-                        ? 'Ingresando...'
-                        : 'Ingresar'}
-                </button>
-            </form>
-
             <div
                 style={{
-                    marginTop: 20,
+                    ...T.card,
+                    width: 420,
+                    maxWidth: '100%',
                 }}
             >
-                <p>
-                    ¿No tenés cuenta?
+                <h1 style={T.pageHead}>
+                    Iniciar sesión
+                </h1>
+
+                <p style={T.pageSub}>
+                    Accedé a tu cuenta de Pymen
                 </p>
 
-                <button
-                    type="button"
-                    onClick={goToRegister}
+                <form
+                    onSubmit={handleLogin}
+                    style={{
+                        marginTop: 24,
+                    }}
                 >
-                    Crear cuenta
-                </button>
+                    <Input
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) =>
+                            setEmail(e.target.value)
+                        }
+                    />
+
+                    <Input
+                        label="Contraseña"
+                        type="password"
+                        value={password}
+                        onChange={(e) =>
+                            setPassword(e.target.value)
+                        }
+                    />
+
+                    {error && (
+                        <p
+                            style={{
+                                color: C.red,
+                                fontSize: 13,
+                                marginBottom: 16,
+                            }}
+                        >
+                            {error}
+                        </p>
+                    )}
+
+                    <Button
+                        type="submit"
+                        variant="lime"
+                        fullWidth
+                        disabled={loading}
+                    >
+                        {loading
+                            ? 'Ingresando...'
+                            : 'Ingresar'}
+                    </Button>
+                </form>
+
+                <div
+                    style={{
+                        marginTop: 20,
+                        textAlign: 'center',
+                    }}
+                >
+                    <p style={T.pageSub}>
+                        ¿No tenés cuenta?
+                    </p>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={goToRegister}
+                    >
+                        Crear cuenta
+                    </Button>
+                </div>
             </div>
         </div>
-    );
+    )
 }

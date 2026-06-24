@@ -2,6 +2,7 @@ import { C } from '../../styles/theme'
 import { useBusinessContext } from '../../context/BusinessContext'
 import { BusinessTab } from '../../types'
 import {authService} from "@/services/authServices.ts";
+import { Button } from '../ui';
 
 const TABS: { key: BusinessTab; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -79,28 +80,20 @@ export function Navbar() {
           {/* Derecha: botón volver */}
           <div style={{minWidth: 120, display: 'flex', justifyContent: 'flex-end'}}>
               {!isAdmin && (
-                  <button
-                      style={{
-                          background: 'transparent',
-                          color: C.gray,
-                          border: `1px solid ${C.border}`,
-                          padding: '7px 14px',
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                      }}
+                  <Button
+                      variant="ghost"
                       onClick={exitBiz}
                   >
                       ← Panel Admin
-                  </button>
+                  </Button>
               )}
           </div>
-          <button
+          <Button
+              variant="red"
               onClick={() => authService.logout()}
           >
               Cerrar sesión
-          </button>
+          </Button>
       </nav>
   )
 }

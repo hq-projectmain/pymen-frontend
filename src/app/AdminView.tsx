@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Badge } from '../components/ui'
 import { useBusinessContext } from '../context/BusinessContext'
 import { useAdminStats } from '../hooks/useBusinesses'
-import { fmtMoney, fmtDate, bizRevenue } from '../services/businessService'
+import { fmtMoney, fmtDate } from '../services/businessService'
 import { C, T } from '../styles/theme'
 
 export function AdminView() {
