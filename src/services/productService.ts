@@ -6,7 +6,7 @@ export interface Product {
     description: string;
     price: number;
     stock: number;
-    isActive: boolean;
+    isActive?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -59,7 +59,7 @@ export const productService = {
         return await response.json();
     },
 
-    async updateProduct(id: string, data: { name?: string; price?: number; stock?: number }): Promise<Product> {
+    async updateProduct(id: string, data: { name?: string; price?: number; stock?: number; isActive?: boolean; }): Promise<Product> {
         const headers = await getAuthHeaders();
         const response = await fetch(`${BASE_URL}/products/${id}`, {
             method: 'PUT',

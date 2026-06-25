@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal, Input } from '../../ui'
 import { useBusinessContext } from '../../../context/BusinessContext'
-import { C, T } from '../../../styles/theme'
+import { T } from '../../../styles/theme'
 import { Product } from '../../../types'
 
 interface ProductModalProps {
