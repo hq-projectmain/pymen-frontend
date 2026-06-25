@@ -3,6 +3,8 @@ import { authService } from '../services/authServices';
 import {Button, Input} from '../components/ui';
 import { C, T } from '../styles/theme';
 
+const BASE_URL = 'http://localhost:3000/pymen';
+
 interface RegisterViewProps {
     goToLogin: () => void;
 }
@@ -12,6 +14,7 @@ export default function RegisterView({
                                      }: RegisterViewProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
 
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ export default function RegisterView({
             setLoading(true);
             setMessage('');
 
-            const { error } =
+            const { data, error } =
                 await authService.register(
                     email,
                     password
@@ -36,9 +39,25 @@ export default function RegisterView({
                 return;
             }
 
-            setMessage(
-                'Cuenta creada correctamente.'
-            );
+            const userId = data.user?.id;
+            if (!userId) {
+                setMessage('Error al obtener el ID del usuario');
+                return;
+            }
+
+            const backendRes = await fetch(`${BASE_URL}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: userId, email, name }),
+            });
+
+            if (!backendRes.ok) {
+                const err = await backendRes.json().catch(() => ({}));
+                setMessage(err.message || 'Cuenta creada pero error al registrar el comercio');
+                return;
+            }
+
+            setMessage('Cuenta creada correctamente. Revisá tu email para confirmar.');
         } catch (err: any) {
             setMessage(
                 err.message ||
@@ -82,6 +101,14 @@ export default function RegisterView({
                     }}
                 >
                     <Input
+                        label="Nombre del comercio"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Ej: Ferretería López"
+                    />
+
+                    <Input
                         label="Email"
                         type="email"
                         value={email}
@@ -119,7 +146,7 @@ export default function RegisterView({
                         type="submit"
                         variant="lime"
                         fullWidth
-                        disabled={loading}
+                        disabled={loading || !name.trim()}
                     >
                         {loading
                             ? 'Creando cuenta...'
