@@ -3,7 +3,7 @@ import { authService } from '../services/authServices';
 import {Button, Input} from '../components/ui';
 import { C, T } from '../styles/theme';
 
-const BASE_URL = 'http://localhost:3000/pymen';
+//const BASE_URL = 'http://localhost:3000/pymen';
 
 interface RegisterViewProps {
     goToLogin: () => void;
@@ -52,11 +52,11 @@ export default function RegisterView({
             //    body: JSON.stringify({ id: userId, email, name }),
             //});
 
-            if (!backendRes.ok) {
-                const err = await backendRes.json().catch(() => ({}));
-                setMessage(err.message || 'Cuenta creada pero error al registrar el comercio');
-                return;
-            }
+            //if (!backendRes.ok) {
+            //    const err = await backendRes.json().catch(() => ({}));
+            //    setMessage(err.message || 'Cuenta creada pero error al registrar el comercio');
+            //    return;
+            //}
 
             setMessage('Cuenta creada correctamente. Revisá tu email para confirmar.');
         } catch (err: any) {
