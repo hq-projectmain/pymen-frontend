@@ -31,7 +31,8 @@ export default function RegisterView({
             const { data, error } =
                 await authService.register(
                     email,
-                    password
+                    password,
+                    name
                 );
 
             if (error) {
@@ -45,11 +46,11 @@ export default function RegisterView({
                 return;
             }
 
-            const backendRes = await fetch(`${BASE_URL}/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: userId, email, name }),
-            });
+            //const backendRes = await fetch(`${BASE_URL}/users`, {
+            //    method: 'POST',
+            //    headers: { 'Content-Type': 'application/json' },
+            //    body: JSON.stringify({ id: userId, email, name }),
+            //});
 
             if (!backendRes.ok) {
                 const err = await backendRes.json().catch(() => ({}));
