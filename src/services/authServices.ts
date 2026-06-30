@@ -8,10 +8,15 @@ export const authService = {
         });
     },
 
-    async register(email: string, password: string) {
+    async register(email: string, password: string, name: string) {
         return await supabase.auth.signUp({
             email,
             password,
+            options: {
+                data: {
+                    name,
+                },
+            },
         });
     },
 
