@@ -1,33 +1,32 @@
 {
   "name": "pymen-frontend",
-  "version": "0.1.0",
   "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< Updated upstream
-    "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
-=======
     "@supabase/supabase-js": "^2.108.2",
     "axios": "^1.18.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
->>>>>>> Stashed changes
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "^4",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4"
   }
 }
