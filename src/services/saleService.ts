@@ -1,4 +1,4 @@
-import { apiClient } from '../api/apiClient';
+import { authService } from './authServices';
 
 export interface SaleItem {
     id: string;
@@ -10,8 +10,12 @@ export interface SaleItem {
 export interface Sale {
     id: string;
     totalPrice: number;
+    user: { id: string };
     items: SaleItem[];
     createdAt: string;
+    voucherNumber?: number;
+    cae?: string;
+    caeExpiration?: string;
 }
 
 export interface CreateSaleItem {
@@ -19,14 +23,77 @@ export interface CreateSaleItem {
     quantity: number;
 }
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/pymen';
+
+async function getAuthHeaders() {
+    const session = await authService.getSession();
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+        userId: session?.user?.id ?? '',
+    };
+}
+
 export const saleService = {
     async getSales(): Promise<Sale[]> {
-        const { data } = await apiClient.get<Sale[]>('/sales');
-        return data;
+        const headers = await getAuthHeaders();
+        if (!headers.userId) throw new Error('No hay sesión activa');
+
+        const response = await fetch(`${BASE_URL}/sales/user/${headers.userId}`, {
+            method: 'GET',
+            headers,
+        });
+        if (!response.ok) throw new Error('No se pudieron cargar las ventas');
+
+        return await response.json();
     },
 
     async createSale(items: CreateSaleItem[], totalPrice: number): Promise<Sale> {
-        const { data } = await apiClient.post<Sale>('/sales', { totalPrice, items });
-        return data;
+        const headers = await getAuthHeaders();
+        if (!headers.userId) throw new Error('No hay sesión activa');
+
+        const response = await fetch(`${BASE_URL}/sales`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ userId: headers.userId, totalPrice, items }),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'No se pudo registrar la venta');
+        }
+
+        return await response.json();
     },
+
+    async generateInvoice(saleId: string): Promise<{ message: string; voucherNumber: number; cae: string; caeExpiration: string }> {
+        const headers = await getAuthHeaders();
+        if (!headers.userId) throw new Error('No hay sesión activa');
+
+        const response = await fetch(`${BASE_URL}/arca/invoice/${saleId}`, {
+            method: 'POST',
+            headers,
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Error al emitir la factura en ARCA');
+        }
+
+        return await response.json();
+    },
+
+    async getInvoicePdfHtml(saleId: string): Promise<string> {
+        const headers = await getAuthHeaders();
+        if (!headers.userId) throw new Error('No hay sesión activa');
+
+        const response = await fetch(`${BASE_URL}/arca/invoice/${saleId}/pdf`, {
+            method: 'GET',
+            headers,
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo obtener el diseño de la factura');
+        }
+        return await response.text();
+    }
 };

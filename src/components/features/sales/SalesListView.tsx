@@ -7,45 +7,153 @@ import { C, T } from '../../../styles/theme';
 const fmtMoney = (n: number) => `$${Number(n).toLocaleString('es-AR')}`;
 const fmtDate  = (d: string) => new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-// ── Detalle de venta ──────────────────────────────────────────────────────────
-function SaleDetail({ sale, onBack }: { sale: Sale; onBack: () => void }) {
+// ── Detalle de venta (Modificado con soporte ARCA) ──────────────────────────
+
+function SaleDetail({ sale, onBack, onRefresh }: { sale: Sale; onBack: () => void; onRefresh: () => void }) {
+    const [localSale, setLocalSale] = useState<Sale>(sale);
+    const [loadingInvoice, setLoadingInvoice] = useState(false);
+    const [loadingPdf, setLoadingPdf] = useState(false);
+
+    // Formateador simple para la fecha de vencimiento AAAAMMDD -> DD/MM/AAAA
+    const fmtCaeExpiry = (dateStr?: string) => {
+        if (!dateStr || dateStr.length !== 8) return dateStr || '—';
+        return `${dateStr.slice(6, 8)}/${dateStr.slice(4, 6)}/${dateStr.slice(0, 4)}`;
+    };
+
+    // 1. Manejo de emisión de factura
+    async function handleGenerateInvoice() {
+        if (!window.confirm('¿Estás seguro de que querés emitir la factura oficial en ARCA/AFIP para esta venta?')) return;
+        try {
+            setLoadingInvoice(true);
+            const data = await saleService.generateInvoice(localSale.id);
+            alert(data.message);
+
+            // Actualizamos la vista local con los datos devueltos
+            const updated = {
+                ...localSale,
+                cae: data.cae,
+                caeExpiration: data.caeExpiration,
+                voucherNumber: data.voucherNumber
+            };
+            setLocalSale(updated);
+            
+            // Refrescamos la lista del componente padre de fondo
+            onRefresh();
+        } catch (err: any) {
+            alert(err.message || 'Ocurrió un error al procesar la factura');
+        } finally {
+            setLoadingInvoice(false);
+        }
+    }
+
+    // 2. Descarga e inyección del HTML en pestaña nueva ("El Tip Seguro")
+    async function handlePrintInvoice() {
+        try {
+            setLoadingPdf(true);
+            const htmlContent = await saleService.getInvoicePdfHtml(localSale.id);
+
+            // Abrimos una nueva pestaña vacía en el navegador
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.open();
+                // Inyectamos el HTML nativo que trajo el backend con sus estilos y scripts auto-ejecutables
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+            } else {
+                alert('El navegador bloqueó la ventana emergente. Por favor, habilitá los pop-ups para este sitio.');
+            }
+        } catch (err: any) {
+            alert(err.message || 'No se pudo generar la vista de impresión');
+        } finally {
+            setLoadingPdf(false);
+        }
+    }
+
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <button style={T.btnGhost} onClick={onBack}>← Volver</button>
-                <div>
-                    <div style={T.pageHead}>Detalle · {sale.id.slice(0, 8)}…</div>
-                    <div style={T.pageSub}>{fmtDate(sale.createdAt)}</div>
+            {/* Cabecera del Detalle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button style={T.btnGhost} onClick={onBack}>← Volver</button>
+                    <div>
+                        <div style={T.pageHead}>Detalle · {localSale.id.slice(0, 8)}…</div>
+                        <div style={T.pageSub}>{fmtDate(localSale.createdAt)}</div>
+                    </div>
+                </div>
+
+                {/* Botonera dinámica según estado del CAE */}
+                <div style={{ display: 'flex', gap: 10 }}>
+                    {!localSale.cae ? (
+                        <button 
+                            style={{ ...T.btnPrimary, background: '#1D9E75' }} 
+                            onClick={handleGenerateInvoice}
+                            disabled={loadingInvoice}
+                        >
+                            {loadingInvoice ? 'Emitiendo CAE...' : '⚡ Generar Factura'}
+                        </button>
+                    ) : (
+                        <button 
+                            style={{ ...T.btnLime, borderColor: C.lime }} 
+                            onClick={handlePrintInvoice}
+                            disabled={loadingPdf}
+                        >
+                            {loadingPdf ? 'Cargando comprobante...' : '🖨️ Imprimir Factura'}
+                        </button>
+                    )}
                 </div>
             </div>
 
+            {/* Tarjeta de información fiscal (Solo si ya fue emitida) */}
+            {localSale.cae && (
+                <div style={{ ...T.card, marginBottom: 20, borderColor: C.borderLime, background: 'rgba(204,255,0,0.02)' }}>
+                    <div style={{ ...T.sectionTitle, color: C.lime, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                        <span>✓ Factura Autorizada por ARCA</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                        <div>
+                            <span style={{ fontSize: 11, color: C.gray, display: 'block', textTransform: 'uppercase' }}>N° Factura</span>
+                            <span style={{ fontSize: 15, color: C.white, fontWeight: 600 }}>{String(localSale.voucherNumber).padStart(8, '0')}</span>
+                        </div>
+                        <div>
+                            <span style={{ fontSize: 11, color: C.gray, display: 'block', textTransform: 'uppercase' }}>CAE</span>
+                            <span style={{ fontSize: 15, color: C.white, fontWeight: 600, letterSpacing: 0.5 }}>{localSale.cae}</span>
+                        </div>
+                        <div>
+                            <span style={{ fontSize: 11, color: C.gray, display: 'block', textTransform: 'uppercase' }}>Vto. CAE</span>
+                            <span style={{ fontSize: 15, color: C.white, fontWeight: 600 }}>{fmtCaeExpiry(localSale.caeExpiration)}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tabla de ítems de la venta */}
             <div style={T.card}>
                 <table style={T.table}>
                     <thead>
-                    <tr>
-                        {['Producto', 'Precio unitario', 'Cantidad', 'Subtotal'].map(h => (
-                            <th key={h} style={T.th}>{h}</th>
-                        ))}
-                    </tr>
+                        <tr>
+                            {['Producto', 'Precio unitario', 'Cantidad', 'Subtotal'].map(h => (
+                                <th key={h} style={T.th}>{h}</th>
+                            ))}
+                        </tr>
                     </thead>
                     <tbody>
-                    {sale.items.map(it => (
-                        <tr key={it.id}>
-                            <td style={T.tdW}>{it.product?.name ?? '—'}</td>
-                            <td style={T.td}>{fmtMoney(it.priceAtSale)}</td>
-                            <td style={T.td}>{it.quantity}</td>
-                            <td style={{ ...T.td, color: C.lime, fontWeight: 600 }}>
-                                {fmtMoney(it.priceAtSale * it.quantity)}
-                            </td>
-                        </tr>
-                    ))}
+                        {localSale.items.map(it => (
+                            <tr key={it.id}>
+                                <td style={T.tdW}>{it.product?.name ?? '—'}</td>
+                                <td style={T.td}>{fmtMoney(it.priceAtSale)}</td>
+                                <td style={T.td}>{it.quantity}</td>
+                                <td style={{ ...T.td, color: C.lime, fontWeight: 600 }}>
+                                    {fmtMoney(it.priceAtSale * it.quantity)}
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
 
                 <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 8, paddingTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 12, color: C.gray, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Total</div>
-                        <div style={{ fontSize: 28, fontWeight: 900, color: C.lime, letterSpacing: -1 }}>{fmtMoney(sale.totalPrice)}</div>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: C.lime, letterSpacing: -1 }}>{fmtMoney(localSale.totalPrice)}</div>
                     </div>
                 </div>
             </div>
@@ -182,7 +290,7 @@ export default function SalesListView() {
 
     useEffect(() => { fetchAll(); }, []);
 
-    if (selected) return <SaleDetail sale={selected} onBack={() => setSelected(null)} />;
+    if (selected) return <SaleDetail sale={selected} onBack={() => setSelected(null)} onRefresh={fetchAll} />;
 
     return (
         <>
