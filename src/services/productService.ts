@@ -22,19 +22,18 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/pymen';
 
 async function getAuthHeaders() {
     const session = await authService.getSession();
+    if (!session?.access_token) throw new Error('No hay sesión activa');
     return {
         'Content-Type': 'application/json',
-        'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
-        userId: session?.user?.id ?? '',
+        'Authorization': `Bearer ${session.access_token}`,
     };
 }
 
 export const productService = {
     async getProducts(): Promise<Product[]> {
         const headers = await getAuthHeaders();
-        if (!headers.userId) throw new Error('No hay sesión activa');
 
-        const response = await fetch(`${BASE_URL}/products/user/${headers.userId}`, {
+        const response = await fetch(`${BASE_URL}/products`, {
             method: 'GET',
             headers,
         });
@@ -46,12 +45,11 @@ export const productService = {
 
     async createProduct(data: CreateProductData): Promise<Product> {
         const headers = await getAuthHeaders();
-        if (!headers.userId) throw new Error('No hay sesión activa');
 
         const response = await fetch(`${BASE_URL}/products`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ ...data, userId: headers.userId }),
+            body: JSON.stringify(data),
         });
 
         if (!response.ok) throw new Error('No se pudo crear el producto');
