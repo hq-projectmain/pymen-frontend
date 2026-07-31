@@ -5,18 +5,20 @@ import RegisterView from './app/RegisterView'
 import DashboardView from './components/features/dashboard/DashboardView'
 import ProductsListView from './components/features/products/ProductsListView'
 import SalesListView from './components/features/sales/SalesListView'
+import ArcaConfigView from './components/features/arca/ArcaConfigView'
 import { authService } from './services/authServices'
 import { userService, UserProfile } from './services/userService'
 import { Modal } from './components/ui/Modal'
 import { Input } from './components/ui/Input'
 import { C, T } from './styles/theme'
 
-type Tab = 'dashboard' | 'products' | 'sales'
+type Tab = 'dashboard' | 'products' | 'sales' | 'arca'
 
 const TABS: { key: Tab; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard'  },
     { key: 'products',  label: 'Productos'  },
     { key: 'sales',     label: 'Ventas'     },
+    { key: 'arca',      label: 'Facturación' },
 ]
 
 function ProfileDropdown() {
@@ -154,6 +156,7 @@ function MainApp() {
                 {tab === 'dashboard' && <DashboardView />}
                 {tab === 'products'  && <ProductsListView />}
                 {tab === 'sales'     && <SalesListView />}
+                {tab === 'arca'      && <ArcaConfigView />}
             </main>
         </div>
     )

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { saleService, Sale, CreateSaleItem } from '../../../services/saleService';
 import { productService, Product } from '../../../services/productService';
 import { Modal } from '../../ui/Modal';
+import { InvoiceModal } from '../arca/InvoiceModal';
+import type { ArcaInvoiceResult } from '../../../services/arcaService';
 import { C, T } from '../../../styles/theme';
 
 const fmtMoney = (n: number) => `$${Number(n).toLocaleString('es-AR')}`;
@@ -9,16 +11,47 @@ const fmtDate  = (d: string) => new Date(d).toLocaleDateString('es-AR', { day: '
 
 // ── Detalle de venta ──────────────────────────────────────────────────────────
 
-function SaleDetail({ sale, onBack }: { sale: Sale; onBack: () => void }) {
+function SaleDetail({ sale, onBack, onRefresh }: { sale: Sale; onBack: () => void; onRefresh: () => void }) {
+    const [localSale, setLocalSale] = useState(sale);
+    const [showInvoice, setShowInvoice] = useState(false);
+
+    function handleIssued(result: ArcaInvoiceResult) {
+        setLocalSale(current => ({
+            ...current,
+            cae: result.cae,
+            cae_vencimiento: result.caeExpiration,
+            nro_comprobante: result.voucherNumber,
+        }));
+        onRefresh();
+    }
+
+    const formatCaeExpiration = (value?: string | null) => value?.length === 8
+        ? `${value.slice(6, 8)}/${value.slice(4, 6)}/${value.slice(0, 4)}`
+        : value || '—';
+
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <button style={T.btnGhost} onClick={onBack}>← Volver</button>
-                <div>
-                    <div style={T.pageHead}>Detalle · {sale.id.slice(0, 8)}…</div>
-                    <div style={T.pageSub}>{fmtDate(sale.createdAt)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button style={T.btnGhost} onClick={onBack}>← Volver</button>
+                    <div>
+                        <div style={T.pageHead}>Detalle · {localSale.id.slice(0, 8)}…</div>
+                        <div style={T.pageSub}>{fmtDate(localSale.createdAt)}</div>
+                    </div>
                 </div>
+                {!localSale.cae && <button style={T.btnPrimary} onClick={() => setShowInvoice(true)}>Facturar en ARCA</button>}
             </div>
+
+            {localSale.cae && (
+                <div style={{ ...T.card, marginBottom: 18, borderColor: C.borderLime }}>
+                    <div style={{ ...T.sectionTitle, color: C.lime }}>Comprobante autorizado por ARCA</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                        <div><div style={T.pageSub}>Número</div><strong>{String(localSale.nro_comprobante ?? '').padStart(8, '0')}</strong></div>
+                        <div><div style={T.pageSub}>CAE</div><strong>{localSale.cae}</strong></div>
+                        <div><div style={T.pageSub}>Vencimiento CAE</div><strong>{formatCaeExpiration(localSale.cae_vencimiento)}</strong></div>
+                    </div>
+                </div>
+            )}
 
             <div style={T.card}>
                 <table style={T.table}>
@@ -30,7 +63,7 @@ function SaleDetail({ sale, onBack }: { sale: Sale; onBack: () => void }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {sale.items.map(it => (
+                        {localSale.items.map(it => (
                             <tr key={it.id}>
                                 <td style={T.tdW}>{it.product?.name ?? '—'}</td>
                                 <td style={T.td}>{fmtMoney(it.priceAtSale)}</td>
@@ -46,10 +79,19 @@ function SaleDetail({ sale, onBack }: { sale: Sale; onBack: () => void }) {
                 <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 8, paddingTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 12, color: C.gray, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Total</div>
-                        <div style={{ fontSize: 28, fontWeight: 900, color: C.lime, letterSpacing: -1 }}>{fmtMoney(sale.totalPrice)}</div>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: C.lime, letterSpacing: -1 }}>{fmtMoney(localSale.totalPrice)}</div>
                     </div>
                 </div>
             </div>
+
+            {showInvoice && (
+                <InvoiceModal
+                    saleId={localSale.id}
+                    totalPrice={Number(localSale.totalPrice)}
+                    onClose={() => setShowInvoice(false)}
+                    onIssued={handleIssued}
+                />
+            )}
         </>
     );
 }
@@ -183,7 +225,7 @@ export default function SalesListView() {
 
     useEffect(() => { fetchAll(); }, []);
 
-    if (selected) return <SaleDetail sale={selected} onBack={() => setSelected(null)} />;
+    if (selected) return <SaleDetail sale={selected} onBack={() => setSelected(null)} onRefresh={fetchAll} />;
 
     return (
         <>

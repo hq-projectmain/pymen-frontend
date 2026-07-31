@@ -13,6 +13,9 @@ export interface Sale {
     user: { id: string };
     items: SaleItem[];
     createdAt: string;
+    cae?: string | null;
+    cae_vencimiento?: string | null;
+    nro_comprobante?: number | null;
 }
 
 export interface CreateSaleItem {

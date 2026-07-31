@@ -6,6 +6,7 @@ export interface UserProfile {
     email: string;
     isActive: boolean;
     createdAt: string;
+    fiscalRole: 'none' | 'operator' | 'admin';
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/pymen';
