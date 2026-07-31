@@ -5,9 +5,10 @@ interface ModalProps {
   title: string
   onClose: () => void
   children: ReactNode
+  width?: number | string
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, width = 440 }: ModalProps) {
   return (
     <div
       style={{
@@ -27,7 +28,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
           border: `1px solid ${C.border}`,
           borderRadius: 16,
           padding: 28,
-          width: 440,
+          width,
           maxWidth: '95vw',
           maxHeight: '90vh',
           overflowY: 'auto',

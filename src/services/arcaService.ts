@@ -2,12 +2,23 @@ import { authService } from './authServices'
 
 export type ArcaEnvironment = 'homologation' | 'production'
 
+export interface ArcaCredentialStatus {
+  configured: boolean
+  source: 'encrypted_database' | 'server_files' | null
+  fingerprint: string | null
+  subject: string | null
+  validFrom: string | null
+  validTo: string | null
+  updatedAt: string | null
+}
+
 export interface ArcaConfig {
   cuit: string
   puntoVenta: number
   condicionIva: string
   environment: ArcaEnvironment
-  expectedSecretLocation: string
+  expectedSecretLocation: string | null
+  credentials: ArcaCredentialStatus
   businessName: string | null
   fiscalAddress: string | null
   updatedAt: string
@@ -98,6 +109,14 @@ export const arcaService = {
   activate: () => request<{ is_active: boolean }>('/arca/activate', { method: 'POST' }),
 
   testConnection: () => request<Record<string, unknown>>('/arca/test-connection'),
+
+  saveCredentials: (certificatePem: string, privateKeyPem: string) => request<{
+    message: string
+    credentials: ArcaCredentialStatus
+  }>('/arca/credentials', {
+    method: 'PUT',
+    body: JSON.stringify({ certificatePem, privateKeyPem }),
+  }),
 
   createInvoice: (saleId: string, data: CreateArcaInvoice) => request<ArcaInvoiceResult>(
     `/arca/invoice/${saleId}`,

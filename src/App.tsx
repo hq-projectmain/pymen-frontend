@@ -12,13 +12,13 @@ import { Modal } from './components/ui/Modal'
 import { Input } from './components/ui/Input'
 import { C, T } from './styles/theme'
 
-type Tab = 'dashboard' | 'products' | 'sales' | 'arca'
+type Tab = 'dashboard' | 'products' | 'sales'
+type ProfileTab = 'profile' | 'arca'
 
 const TABS: { key: Tab; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard'  },
     { key: 'products',  label: 'Productos'  },
     { key: 'sales',     label: 'Ventas'     },
-    { key: 'arca',      label: 'Facturación' },
 ]
 
 function ProfileDropdown() {
@@ -28,6 +28,7 @@ function ProfileDropdown() {
     const [name, setName]           = useState('')
     const [saving, setSaving]       = useState(false)
     const [saveError, setSaveError] = useState('')
+    const [profileTab, setProfileTab] = useState<ProfileTab>('profile')
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -38,9 +39,10 @@ function ProfileDropdown() {
         return () => document.removeEventListener('mousedown', handleClick)
     }, [])
 
-    async function openProfile() {
+    async function openProfile(tab: ProfileTab) {
         setOpen(false)
         setSaveError('')
+        setProfileTab(tab)
         try {
             const data = await userService.getProfile()
             setProfile(data)
@@ -78,10 +80,17 @@ function ProfileDropdown() {
                 {open && (
                     <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', background: '#1F232B', border: `1px solid ${C.border}`, borderRadius: 10, minWidth: 160, zIndex: 100, overflow: 'hidden' }}>
                         <button
-                            onClick={openProfile}
+                            onClick={() => openProfile('profile')}
                             style={{ width: '100%', background: 'transparent', border: 'none', color: C.white, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
                         >
                             Mi perfil
+                        </button>
+                        <div style={{ height: 1, background: C.border }} />
+                        <button
+                            onClick={() => openProfile('arca')}
+                            style={{ width: '100%', background: 'transparent', border: 'none', color: C.lime, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
+                        >
+                            ARCA
                         </button>
                         <div style={{ height: 1, background: C.border }} />
                         <button
@@ -95,28 +104,39 @@ function ProfileDropdown() {
             </div>
 
             {showModal && profile && (
-                <Modal title="Mi perfil" onClose={() => setShowModal(false)}>
-                    <div style={{ marginBottom: 16 }}>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray, display: 'block', marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
-                        <div style={{ background: C.black, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', color: C.gray, fontSize: 14 }}>
-                            {profile.email}
-                        </div>
+                <Modal title="Mi cuenta" width={profileTab === 'arca' ? 900 : 520} onClose={() => setShowModal(false)}>
+                    <div role="tablist" aria-label="Secciones de la cuenta" style={{ display: 'flex', gap: 8, borderBottom: `1px solid ${C.border}`, paddingBottom: 12, marginBottom: 20 }}>
+                        <button role="tab" aria-selected={profileTab === 'profile'} style={profileTab === 'profile' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('profile')}>Mi perfil</button>
+                        <button role="tab" aria-selected={profileTab === 'arca'} style={profileTab === 'arca' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('arca')}>ARCA</button>
                     </div>
 
-                    <Input
-                        label="Nombre del comercio"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                    />
+                    {profileTab === 'profile' ? (
+                        <>
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: 12, fontWeight: 600, color: C.gray, display: 'block', marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</label>
+                                <div style={{ background: C.black, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', color: C.gray, fontSize: 14 }}>
+                                    {profile.email}
+                                </div>
+                            </div>
 
-                    {saveError && <p style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{saveError}</p>}
+                            <Input
+                                label="Nombre del comercio"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                            />
 
-                    <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                        <button style={{ ...T.btnPrimary, flex: 1, padding: '12px 18px' }} onClick={handleSave} disabled={saving}>
-                            {saving ? 'Guardando...' : 'Guardar cambios'}
-                        </button>
-                        <button style={{ ...T.btnGhost, padding: '12px 16px' }} onClick={() => setShowModal(false)}>Cancelar</button>
-                    </div>
+                            {saveError && <p style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{saveError}</p>}
+
+                            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                                <button style={{ ...T.btnPrimary, flex: 1, padding: '12px 18px' }} onClick={handleSave} disabled={saving}>
+                                    {saving ? 'Guardando...' : 'Guardar cambios'}
+                                </button>
+                                <button style={{ ...T.btnGhost, padding: '12px 16px' }} onClick={() => setShowModal(false)}>Cancelar</button>
+                            </div>
+                        </>
+                    ) : (
+                        <ArcaConfigView profile={profile} />
+                    )}
                 </Modal>
             )}
         </>
@@ -156,7 +176,6 @@ function MainApp() {
                 {tab === 'dashboard' && <DashboardView />}
                 {tab === 'products'  && <ProductsListView />}
                 {tab === 'sales'     && <SalesListView />}
-                {tab === 'arca'      && <ArcaConfigView />}
             </main>
         </div>
     )
