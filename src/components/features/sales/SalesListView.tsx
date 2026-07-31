@@ -109,7 +109,7 @@ function SaleFormModal({ products, onClose, onCreated }: {
     const [saving, setSaving]   = useState(false);
     const [error, setError]     = useState('');
 
-    const activeProducts = products.filter(p => p.isActive);
+    const activeProducts = products.filter(p => p.isActive && p.stock > 0);
 
     const updateItem = (i: number, field: keyof SaleFormItem, value: string) =>
         setItems(s => s.map((x, j) => j === i ? { ...x, [field]: field === 'quantity' ? Number(value) : value } : x));
@@ -123,6 +123,14 @@ function SaleFormModal({ products, onClose, onCreated }: {
 
     async function handleSave() {
         if (items.some(it => !it.productId)) return;
+        const invalidItem = items.find(item => {
+            const product = products.find(candidate => candidate.id === item.productId);
+            return !Number.isInteger(item.quantity) || item.quantity < 1 || !product || item.quantity > product.stock;
+        });
+        if (invalidItem) {
+            setError('Revisá las cantidades: deben ser enteras, mayores a cero y no superar el stock disponible.');
+            return;
+        }
         try {
             setSaving(true);
             setError('');
