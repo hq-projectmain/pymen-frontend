@@ -48,6 +48,11 @@ function ProfileDropdown({ profile }: { profile: UserProfile }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    if (!profile || profile.systemRole === 'platform_admin') return
+    void userService.recordSessionAccess().catch(() => undefined)
+  }, [profile])
+
   function openProfile(tab: ProfileTab) {
     setOpen(false)
     setSaveError('')

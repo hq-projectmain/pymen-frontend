@@ -35,6 +35,47 @@ function MetricCard({ label, value, hint }: { label: string; value: string | num
   )
 }
 
+type AccessRange = 'daily' | 'weekly' | 'monthly'
+
+const accessRangeLabel: Record<AccessRange, string> = {
+  daily: 'Día',
+  weekly: 'Semana',
+  monthly: 'Mes',
+}
+
+function AccessChart({ points, label }: { points: Array<{ period: string; count: number }>; label: string }) {
+  const width = 720
+  const height = 190
+  const padding = 24
+  const max = Math.max(1, ...points.map(point => point.count))
+  const coordinates = points.map((point, index) => {
+    const x = points.length === 1 ? width / 2 : padding + (index * (width - padding * 2)) / (points.length - 1)
+    const y = height - padding - (point.count / max) * (height - padding * 2)
+    return { ...point, x, y }
+  })
+
+  return (
+    <div>
+      <svg role="img" aria-label={`Accesos agrupados por ${label.toLowerCase()}`} viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', minHeight: 160, display: 'block' }}>
+        <title>{`Accesos por ${label.toLowerCase()}`}</title>
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke={C.border} />
+        <polyline fill="none" stroke={C.lime} strokeWidth="3" points={coordinates.map(point => `${point.x},${point.y}`).join(' ')} />
+        {coordinates.map(point => (
+          <g key={point.period}>
+            <circle cx={point.x} cy={point.y} r="4" fill={C.lime}>
+              <title>{`${point.period}: ${point.count} accesos`}</title>
+            </circle>
+          </g>
+        ))}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', color: C.gray, fontSize: 11 }}>
+        <span>{points[0]?.period ?? '—'}</span>
+        <span>{points[points.length - 1]?.period ?? '—'}</span>
+      </div>
+    </div>
+  )
+}
+
 function BusinessDetailView({
   business,
   detail,
@@ -50,6 +91,15 @@ function BusinessDetailView({
   onBack: () => void
   onRetry: () => void
 }) {
+  const [accessRange, setAccessRange] = useState<AccessRange>('daily')
+  const movementLabel: Record<string, string> = {
+    sale: 'Venta',
+    product_created: 'Producto creado',
+    product_updated: 'Producto actualizado',
+    product_deactivated: 'Producto desactivado',
+    stock_purchase: 'Ingreso / compra de stock',
+    stock_adjustment: 'Ajuste manual de stock',
+  }
   return (
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -147,6 +197,61 @@ function BusinessDetailView({
               )}
             </section>
           </div>
+
+          <section style={{ ...T.card, marginTop: 20 }}>
+            <div style={T.sectionTitle}>Movimientos operativos recientes</div>
+            <div style={{ ...T.pageSub, marginBottom: 14 }}>Los movimientos conservan el actor real y el nombre del producto al momento de la operación.</div>
+            {detail.movements.length === 0 ? <p style={T.pageSub}>Aún no hay movimientos recopilados.</p> : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={T.table}>
+                  <thead><tr>{['Tipo', 'Producto / detalle', 'Actor', 'Cantidad', 'Monto', 'Fecha'].map(value => <th key={value} style={T.th}>{value}</th>)}</tr></thead>
+                  <tbody>{detail.movements.map(movement => (
+                    <tr key={movement.id}>
+                      <td style={T.tdW}>{movementLabel[movement.kind] ?? movement.kind}</td>
+                      <td style={T.td}>{movement.productName || movement.description}</td>
+                      <td style={T.td}>{movement.actor.name}<br /><span style={{ color: C.gray, fontSize: 11 }}>{movement.actor.systemRole === 'owner' ? 'Dueño' : 'Empleado'} · {movement.actor.email}</span></td>
+                      <td style={T.td}>{movement.quantity == null ? '—' : movement.quantity}</td>
+                      <td style={T.td}>{movement.amount == null ? '—' : fmtMoney(movement.amount)}</td>
+                      <td style={T.td}>{fmtDateTime(movement.createdAt)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section style={{ ...T.card, marginTop: 20 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={T.sectionTitle}>Accesos al negocio</div>
+                <div style={T.pageSub}>Este mes: {detail.accessStats.monthSummary.accesses} accesos de {detail.accessStats.monthSummary.activeUsers} usuarios</div>
+              </div>
+              <div role="group" aria-label="Agrupar accesos" style={{ display: 'flex', gap: 6 }}>
+                {(Object.keys(accessRangeLabel) as AccessRange[]).map(range => (
+                  <button key={range} type="button" style={accessRange === range ? T.btnPrimary : T.btnGhost} onClick={() => setAccessRange(range)}>{accessRangeLabel[range]}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <AccessChart points={detail.accessStats[accessRange]} label={accessRangeLabel[accessRange]} />
+            </div>
+            <p style={{ color: C.gray, fontSize: 12, borderLeft: `3px solid ${C.borderLime}`, paddingLeft: 10 }}>{detail.accessStats.collectionNotice}</p>
+
+            <div style={{ ...T.sectionTitle, marginTop: 22 }}>Accesos por usuario</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={T.table}>
+                <thead><tr><th style={T.th}>Usuario</th><th style={T.th}>Rol</th><th style={T.th}>Accesos este mes</th><th style={T.th}>Último acceso histórico</th></tr></thead>
+                <tbody>{detail.accessStats.byUser.map(member => (
+                  <tr key={member.userId}>
+                    <td style={T.tdW}>{member.name}<br /><span style={{ color: C.gray, fontSize: 11 }}>{member.email}</span></td>
+                    <td style={T.td}>{member.systemRole === 'owner' ? 'Dueño' : 'Empleado'}</td>
+                    <td style={T.td}>{member.monthAccesses}</td>
+                    <td style={T.td}>{member.lastAccessAt ? fmtDateTime(member.lastAccessAt) : 'Sin accesos recopilados'}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          </section>
         </>
       ) : null}
     </div>

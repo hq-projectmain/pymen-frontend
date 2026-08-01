@@ -89,6 +89,36 @@ export interface AdminBusinessDetail {
         hasCae: boolean;
         unitCount: number;
     }>;
+    movements: Array<{
+        id: string;
+        kind: 'sale' | 'product_created' | 'product_updated' | 'product_deactivated' | 'stock_purchase' | 'stock_adjustment';
+        productName: string | null;
+        quantity: number | null;
+        amount: number | null;
+        description: string;
+        createdAt: string;
+        actor: {
+            id: string;
+            name: string;
+            email: string;
+            systemRole: SystemRole;
+        };
+    }>;
+    accessStats: {
+        collectionNotice: string;
+        monthSummary: { accesses: number; activeUsers: number };
+        daily: Array<{ period: string; count: number }>;
+        weekly: Array<{ period: string; count: number }>;
+        monthly: Array<{ period: string; count: number }>;
+        byUser: Array<{
+            userId: string;
+            name: string;
+            email: string;
+            systemRole: SystemRole;
+            monthAccesses: number;
+            lastAccessAt: string | null;
+        }>;
+    };
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/pymen';
@@ -127,6 +157,15 @@ export const userService = {
             body: JSON.stringify(data),
         });
         return parseResponse<UserProfile>(response, 'No se pudo actualizar el perfil');
+    },
+
+    async recordSessionAccess(): Promise<{ recorded: boolean }> {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${BASE_URL}/users/access/session`, {
+            method: 'POST',
+            headers,
+        });
+        return parseResponse<{ recorded: boolean }>(response, 'No se pudo registrar el acceso');
     },
 
     async validateRegistration(data: { email: string; systemRole: SystemRole; ownerEmail?: string }): Promise<RegistrationValidation> {
