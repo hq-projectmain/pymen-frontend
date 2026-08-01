@@ -42,6 +42,55 @@ export interface AdminBusiness {
     createdAt: string;
 }
 
+export interface AdminBusinessDetail {
+    identity: {
+        ownerId: string;
+        ownerName: string;
+        ownerEmail: string;
+        businessName: string;
+        isActive: boolean;
+        createdAt: string;
+    };
+    employees: {
+        total: number;
+        active: number;
+        inactive: number;
+    };
+    products: {
+        total: number;
+        active: number;
+        inactive: number;
+        totalStock: number;
+        lowStock: number;
+        lowStockThreshold: number;
+    };
+    sales: {
+        count: number;
+        totalRevenue: number;
+        averageTicket: number;
+        withCae: number;
+        withoutCae: number;
+    };
+    dailyActivity: Array<{
+        date: string;
+        saleCount: number;
+        revenue: number;
+    }>;
+    topProducts: Array<{
+        productId: string;
+        name: string;
+        quantity: number;
+        revenue: number;
+    }>;
+    recentSales: Array<{
+        id: string;
+        totalPrice: number;
+        createdAt: string;
+        hasCae: boolean;
+        unitCount: number;
+    }>;
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/pymen';
 
 async function getAuthHeaders() {
@@ -110,5 +159,11 @@ export const userService = {
         const headers = await getAuthHeaders();
         const response = await fetch(`${BASE_URL}/users/admin/businesses`, { headers });
         return parseResponse<AdminBusiness[]>(response, 'No se pudieron cargar los negocios');
+    },
+
+    async getAdminBusinessDetail(ownerId: string): Promise<AdminBusinessDetail> {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${BASE_URL}/users/admin/businesses/${encodeURIComponent(ownerId)}`, { headers });
+        return parseResponse<AdminBusinessDetail>(response, 'No se pudo cargar el detalle del negocio');
     },
 };
