@@ -228,7 +228,7 @@ function BusinessDetailView({
               </div>
               <div role="group" aria-label="Agrupar accesos" style={{ display: 'flex', gap: 6 }}>
                 {(Object.keys(accessRangeLabel) as AccessRange[]).map(range => (
-                  <button key={range} type="button" style={accessRange === range ? T.btnPrimary : T.btnGhost} onClick={() => setAccessRange(range)}>{accessRangeLabel[range]}</button>
+                  <button key={range} type="button" aria-pressed={accessRange === range} style={accessRange === range ? T.btnPrimary : T.btnGhost} onClick={() => setAccessRange(range)}>{accessRangeLabel[range]}</button>
                 ))}
               </div>
             </div>
