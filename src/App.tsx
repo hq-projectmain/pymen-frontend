@@ -19,12 +19,12 @@ import { C, T } from './styles/theme'
 type Tab = 'dashboard' | 'products' | 'sales' | 'suppliers' | 'purchases'
 type ProfileTab = 'profile' | 'arca' | 'team'
 
-const TABS: { key: Tab; label: string; ownerOnly?: boolean }[] = [
+const TABS: { key: Tab; label: string; businessUserOnly?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'products', label: 'Productos' },
   { key: 'sales', label: 'Ventas' },
-  { key: 'suppliers', label: 'Proveedores', ownerOnly: true },
-  { key: 'purchases', label: 'Compras', ownerOnly: true },
+  { key: 'suppliers', label: 'Proveedores', businessUserOnly: true },
+  { key: 'purchases', label: 'Compras', businessUserOnly: true },
 ]
 
 const roleLabel = {
@@ -139,8 +139,8 @@ function ProfileDropdown({ profile }: { profile: UserProfile }) {
 function AppShell({ profile }: { profile: UserProfile }) {
   const [tab, setTab] = useState<Tab>('dashboard')
   const isPlatformAdmin = profile.systemRole === 'platform_admin'
-  const isOwner = profile.systemRole === 'owner'
-  const visibleTabs = TABS.filter(item => !item.ownerOnly || isOwner)
+  const isBusinessUser = profile.systemRole === 'owner' || profile.systemRole === 'employee'
+  const visibleTabs = TABS.filter(item => !item.businessUserOnly || isBusinessUser)
 
   return (
     <div style={{ background: C.black, minHeight: '100vh', color: C.white, fontFamily: "'Inter', system-ui, sans-serif", display: 'flex', flexDirection: 'column' }}>
@@ -156,8 +156,8 @@ function AppShell({ profile }: { profile: UserProfile }) {
         {!isPlatformAdmin && tab === 'dashboard' ? <DashboardView /> : null}
         {!isPlatformAdmin && tab === 'products' ? <ProductsListView /> : null}
         {!isPlatformAdmin && tab === 'sales' ? <SalesListView /> : null}
-        {isOwner && tab === 'suppliers' ? <SuppliersView /> : null}
-        {isOwner && tab === 'purchases' ? <PurchasesView /> : null}
+        {isBusinessUser && tab === 'suppliers' ? <SuppliersView /> : null}
+        {isBusinessUser && tab === 'purchases' ? <PurchasesView /> : null}
       </main>
     </div>
   )
