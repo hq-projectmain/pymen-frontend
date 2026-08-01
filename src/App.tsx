@@ -5,7 +5,9 @@ import { AdminView } from './app/AdminView'
 import ArcaConfigView from './components/features/arca/ArcaConfigView'
 import DashboardView from './components/features/dashboard/DashboardView'
 import ProductsListView from './components/features/products/ProductsListView'
+import PurchasesView from './components/features/purchases/PurchasesView'
 import SalesListView from './components/features/sales/SalesListView'
+import SuppliersView from './components/features/suppliers/SuppliersView'
 import TeamView from './components/features/team/TeamView'
 import { Input } from './components/ui/Input'
 import { Modal } from './components/ui/Modal'
@@ -14,13 +16,15 @@ import { authService } from './services/authServices'
 import { userService, type UserProfile } from './services/userService'
 import { C, T } from './styles/theme'
 
-type Tab = 'dashboard' | 'products' | 'sales'
+type Tab = 'dashboard' | 'products' | 'sales' | 'suppliers' | 'purchases'
 type ProfileTab = 'profile' | 'arca' | 'team'
 
-const TABS: { key: Tab; label: string }[] = [
+const TABS: { key: Tab; label: string; ownerOnly?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'products', label: 'Productos' },
   { key: 'sales', label: 'Ventas' },
+  { key: 'suppliers', label: 'Proveedores', ownerOnly: true },
+  { key: 'purchases', label: 'Compras', ownerOnly: true },
 ]
 
 const roleLabel = {
@@ -135,13 +139,15 @@ function ProfileDropdown({ profile }: { profile: UserProfile }) {
 function AppShell({ profile }: { profile: UserProfile }) {
   const [tab, setTab] = useState<Tab>('dashboard')
   const isPlatformAdmin = profile.systemRole === 'platform_admin'
+  const isOwner = profile.systemRole === 'owner'
+  const visibleTabs = TABS.filter(item => !item.ownerOnly || isOwner)
 
   return (
     <div style={{ background: C.black, minHeight: '100vh', color: C.white, fontFamily: "'Inter', system-ui, sans-serif", display: 'flex', flexDirection: 'column' }}>
-      <nav style={{ background: '#1F232B', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56, position: 'sticky', top: 0, zIndex: 10 }}>
+      <nav style={{ background: '#1F232B', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 56, position: 'sticky', top: 0, zIndex: 10, gap: 12 }}>
         <span style={{ fontSize: 20, fontWeight: 900, color: C.white }}>py<span style={{ color: C.red }}>men</span> <span style={{ fontSize: 11, color: C.gray, fontWeight: 500 }}>ERP</span></span>
         {!isPlatformAdmin ? (
-          <div style={{ display: 'flex', gap: 4 }}>{TABS.map(item => <button key={item.key} onClick={() => setTab(item.key)} style={{ background: 'transparent', color: tab === item.key ? C.white : C.gray, border: tab === item.key ? '1.5px solid rgba(255,255,255,0.6)' : '1.5px solid transparent', padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>{item.label}</button>)}</div>
+          <div style={{ display: 'flex', gap: 4, overflowX: 'auto', padding: '8px 0' }}>{visibleTabs.map(item => <button key={item.key} onClick={() => setTab(item.key)} style={{ background: 'transparent', color: tab === item.key ? C.white : C.gray, border: tab === item.key ? '1.5px solid rgba(255,255,255,0.6)' : '1.5px solid transparent', padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>{item.label}</button>)}</div>
         ) : <strong style={{ color: C.gray, fontSize: 13 }}>Panel global</strong>}
         <ProfileDropdown profile={profile} />
       </nav>
@@ -150,6 +156,8 @@ function AppShell({ profile }: { profile: UserProfile }) {
         {!isPlatformAdmin && tab === 'dashboard' ? <DashboardView /> : null}
         {!isPlatformAdmin && tab === 'products' ? <ProductsListView /> : null}
         {!isPlatformAdmin && tab === 'sales' ? <SalesListView /> : null}
+        {isOwner && tab === 'suppliers' ? <SuppliersView /> : null}
+        {isOwner && tab === 'purchases' ? <PurchasesView /> : null}
       </main>
     </div>
   )

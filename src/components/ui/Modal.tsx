@@ -29,9 +29,10 @@ export function Modal({ title, onClose, children, width = 440 }: ModalProps) {
           borderRadius: 16,
           padding: 28,
           width,
-          maxWidth: '95vw',
+          maxWidth: 'calc(100vw - 24px)',
           maxHeight: '90vh',
           overflowY: 'auto',
+          boxSizing: 'border-box',
         }}
       >
         {/* Header */}
