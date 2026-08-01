@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { arcaService, type ArcaConfig, type ArcaInvoiceResult, type CreateArcaInvoice } from '../../../services/arcaService'
+import { arcaService, type ArcaInvoiceContext, type ArcaInvoiceResult, type CreateArcaInvoice } from '../../../services/arcaService'
 import { Modal } from '../../ui/Modal'
 import { Input } from '../../ui/Input'
 import { C, T } from '../../../styles/theme'
@@ -30,7 +30,7 @@ const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100)
 const arcaDate = (value: string) => value.replace(/-/g, '')
 
 export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceModalProps) {
-  const [config, setConfig] = useState<ArcaConfig | null>(null)
+  const [context, setContext] = useState<ArcaInvoiceContext | null>(null)
   const [voucherType, setVoucherType] = useState<VoucherType>(11)
   const [concept, setConcept] = useState<Concept>(1)
   const [documentType, setDocumentType] = useState(99)
@@ -47,8 +47,8 @@ export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceM
 
   useEffect(() => {
     let active = true
-    arcaService.getConfig()
-      .then(value => { if (active) setConfig(value) })
+    arcaService.getInvoiceContext()
+      .then(value => { if (active) setContext(value) })
       .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'No se pudo cargar la configuración ARCA') })
       .finally(() => { if (active) setLoadingConfig(false) })
     return () => { active = false }
@@ -103,7 +103,11 @@ export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceM
   }
 
   async function handleSubmit() {
-    if (!config) return
+    if (!context) return
+    if (!context.configured || !context.canInvoice) {
+      setError(context.message || 'La facturación ARCA no está lista para este comercio')
+      return
+    }
     if (!/^\d{1,11}$/.test(documentNumber)) {
       setError('El documento debe contener solamente números')
       return
@@ -116,12 +120,12 @@ export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceM
       setError('Los comprobantes de servicios requieren período y fecha de vencimiento de pago')
       return
     }
-    if (config.environment === 'production' && productionConfirmation !== 'EMITIR') {
+    if (context.environment === 'production' && productionConfirmation !== 'EMITIR') {
       setError('Escribí EMITIR para confirmar una factura real de producción')
       return
     }
 
-    const environmentLabel = config.environment === 'production' ? 'PRODUCCIÓN' : 'HOMOLOGACIÓN'
+    const environmentLabel = context.environment === 'production' ? 'PRODUCCIÓN' : 'HOMOLOGACIÓN'
     if (!window.confirm(`Se solicitará un CAE en ${environmentLabel}. ¿Confirmás la emisión?`)) return
 
     try {
@@ -141,11 +145,15 @@ export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceM
     <Modal title="Emitir comprobante ARCA" onClose={onClose}>
       {loadingConfig ? <p style={{ color: C.lime }}>Validando configuración...</p> : (
         <>
-          {config && (
-            <div style={{ padding: 12, borderRadius: 8, marginBottom: 16, background: config.environment === 'production' ? 'rgba(255,59,48,.12)' : 'rgba(204,255,0,.08)', color: config.environment === 'production' ? C.red : C.lime, fontSize: 13, fontWeight: 700 }}>
-              {config.environment === 'production' ? 'PRODUCCIÓN · comprobante fiscal real' : 'HOMOLOGACIÓN · comprobante de prueba'} · PV {config.puntoVenta}
+          {context && (
+            <div style={{ padding: 12, borderRadius: 8, marginBottom: 16, background: context.environment === 'production' ? 'rgba(255,59,48,.12)' : 'rgba(204,255,0,.08)', color: context.environment === 'production' ? C.red : C.lime, fontSize: 13, fontWeight: 700 }}>
+              {context.environment === 'production' ? 'PRODUCCIÓN · comprobante fiscal real' : 'HOMOLOGACIÓN · comprobante de prueba'} · PV {context.puntoVenta ?? '—'}
             </div>
           )}
+
+          {context && (!context.configured || !context.canInvoice) ? (
+            <p role="alert" style={{ color: C.red, fontSize: 13 }}>{context.message || 'La facturación ARCA no está lista para este comercio.'}</p>
+          ) : null}
 
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, color: C.gray, display: 'block', marginBottom: 6 }}>TIPO DE COMPROBANTE</label>
@@ -212,14 +220,14 @@ export function InvoiceModal({ saleId, totalPrice, onClose, onIssued }: InvoiceM
             <strong style={{ color: C.white }}>${Number(totalPrice).toLocaleString('es-AR')}</strong>
           </div>
 
-          {config?.environment === 'production' && (
+          {context?.environment === 'production' && (
             <Input label="Escribí EMITIR para confirmar" value={productionConfirmation} onChange={event => setProductionConfirmation(event.target.value)} />
           )}
 
           {error && <p role="alert" style={{ color: C.red, fontSize: 13 }}>{error}</p>}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <button style={{ ...T.btnPrimary, flex: 1 }} disabled={!config || submitting} onClick={handleSubmit}>
+            <button style={{ ...T.btnPrimary, flex: 1 }} disabled={!context?.configured || !context.canInvoice || submitting} onClick={handleSubmit}>
               {submitting ? 'Solicitando CAE...' : 'Emitir en ARCA'}
             </button>
             <button style={T.btnGhost} disabled={submitting} onClick={onClose}>Cancelar</button>

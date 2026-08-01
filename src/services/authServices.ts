@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { SystemRole } from './userService';
 
 export const authService = {
     async login(email: string, password: string) {
@@ -8,13 +9,16 @@ export const authService = {
         });
     },
 
-    async register(email: string, password: string, name: string) {
+    async register(email: string, password: string, name: string, role: SystemRole, ownerEmail?: string, businessName?: string) {
         return await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: {
                     name,
+                    system_role: role,
+                    owner_email: ownerEmail || undefined,
+                    business_name: businessName || undefined,
                 },
             },
         });

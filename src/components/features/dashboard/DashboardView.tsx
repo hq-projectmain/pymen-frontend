@@ -32,7 +32,7 @@ export default function DashboardView() {
                 ]);
                 setProducts(productsData);
                 setSales(salesData);
-                setBusinessName(profile.name);
+                setBusinessName(profile.businessName ?? profile.name);
             } catch (err: any) {
                 setError(err.message || 'Error al cargar el dashboard');
             } finally {

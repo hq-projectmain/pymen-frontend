@@ -24,6 +24,14 @@ export interface ArcaConfig {
   updatedAt: string
 }
 
+export interface ArcaInvoiceContext {
+  configured: boolean
+  canInvoice: boolean
+  environment?: ArcaEnvironment
+  puntoVenta?: number
+  message?: string
+}
+
 export interface SaveArcaConfig {
   cuit: string
   puntoVenta: number
@@ -100,6 +108,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const arcaService = {
   getConfig: () => request<ArcaConfig>('/arca/config'),
+
+  getInvoiceContext: () => request<ArcaInvoiceContext>('/arca/invoice-context'),
 
   saveConfig: (data: SaveArcaConfig) => request<{ message: string; data: ArcaConfig }>('/arca/config', {
     method: 'PUT',

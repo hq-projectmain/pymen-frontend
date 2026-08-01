@@ -102,7 +102,7 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
     return () => { active = false }
   }, [suppliedProfile])
 
-  const isAdmin = profile?.fiscalRole === 'admin'
+  const isAdmin = profile?.systemRole === 'owner'
 
   async function handleSave() {
     if (!/^\d{11}$/.test(form.cuit)) {
@@ -186,7 +186,7 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
 
       {!isAdmin && (
         <div style={{ ...T.card, borderColor: 'rgba(255,59,48,.35)', marginBottom: 18, color: C.white }}>
-          Tu cuenta no tiene el rol fiscal <strong>admin</strong>. Solo un administrador autorizado puede cambiar credenciales o emitir comprobantes.
+          Solo el dueño del negocio puede cambiar la configuración y las credenciales fiscales.
         </div>
       )}
 
