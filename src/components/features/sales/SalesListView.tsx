@@ -5,6 +5,7 @@ import { Modal } from '../../ui/Modal';
 import { InvoiceModal } from '../arca/InvoiceModal';
 import type { ArcaInvoiceResult } from '../../../services/arcaService';
 import { C, T } from '../../../styles/theme';
+import { userService } from '../../../services/userService';
 
 const fmtMoney = (n: number) => `$${Number(n).toLocaleString('es-AR')}`;
 const fmtDate  = (d: string) => new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -100,14 +101,16 @@ function SaleDetail({ sale, onBack, onRefresh }: { sale: Sale; onBack: () => voi
 
 interface SaleFormItem { productId: string; quantity: number }
 
-function SaleFormModal({ products, onClose, onCreated }: {
+function SaleFormModal({ products, maxDiscountPercent, onClose, onCreated }: {
     products: Product[];
+    maxDiscountPercent: number;
     onClose: () => void;
     onCreated: () => void;
 }) {
     const [items, setItems]     = useState<SaleFormItem[]>([{ productId: '', quantity: 1 }]);
     const [saving, setSaving]   = useState(false);
     const [error, setError]     = useState('');
+    const [discountPercent, setDiscountPercent] = useState(0);
 
     const activeProducts = products.filter(p => p.isActive && p.stock > 0);
 
@@ -116,10 +119,11 @@ function SaleFormModal({ products, onClose, onCreated }: {
 
     const removeItem = (i: number) => setItems(s => s.filter((_, j) => j !== i));
 
-    const total = items.reduce((acc, it) => {
+    const subtotal = items.reduce((acc, it) => {
         const p = products.find(p => p.id === it.productId);
         return acc + (p ? p.price * it.quantity : 0);
     }, 0);
+    const total = Math.round((subtotal - subtotal * discountPercent / 100) * 100) / 100;
 
     async function handleSave() {
         if (items.some(it => !it.productId)) return;
@@ -135,7 +139,7 @@ function SaleFormModal({ products, onClose, onCreated }: {
             setSaving(true);
             setError('');
             const payload: CreateSaleItem[] = items.map(it => ({ product_id: it.productId, quantity: it.quantity }));
-            await saleService.createSale(payload, total);
+            await saleService.createSale(payload, total, discountPercent);
             onCreated();
             onClose();
         } catch (err: any) {
@@ -186,8 +190,9 @@ function SaleFormModal({ products, onClose, onCreated }: {
                 </button>
             </div>
 
+            {maxDiscountPercent > 0 ? <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, color: C.gray }}>Descuento (máximo {maxDiscountPercent}%)</label><input type="number" min="0" max={maxDiscountPercent} step="0.01" value={discountPercent} onChange={e => setDiscountPercent(Math.min(maxDiscountPercent, Math.max(0, Number(e.target.value))))} style={inputStyle} /></div> : null}
             <div style={{ background: C.black, borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: C.gray }}>Total</span>
+                <span style={{ fontSize: 13, color: C.gray }}>{discountPercent ? `Subtotal ${fmtMoney(subtotal)} · descuento ${discountPercent}%` : 'Total'}</span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: C.lime }}>{fmtMoney(total)}</span>
             </div>
 
@@ -213,17 +218,20 @@ export default function SalesListView() {
     const [selected, setSelected]   = useState<Sale | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [hovered, setHovered]     = useState<string | null>(null);
+    const [maxDiscountPercent, setMaxDiscountPercent] = useState(0);
 
     async function fetchAll() {
         try {
             setLoading(true);
             setError('');
-            const [salesData, productsData] = await Promise.all([
+            const [salesData, productsData, profile] = await Promise.all([
                 saleService.getSales(),
                 productService.getProducts(),
+                userService.getProfile(),
             ]);
             setSales(salesData);
             setProducts(productsData);
+            setMaxDiscountPercent(profile.systemRole === 'owner' ? 100 : Number(profile.maxDiscountPercent ?? 0));
         } catch (err: any) {
             setError(err.message || 'Error al conectar con el servidor');
         } finally {
@@ -284,6 +292,7 @@ export default function SalesListView() {
             {showModal && (
                 <SaleFormModal
                     products={products}
+                    maxDiscountPercent={maxDiscountPercent}
                     onClose={() => setShowModal(false)}
                     onCreated={fetchAll}
                 />

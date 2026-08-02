@@ -4,6 +4,8 @@ import {
   userService,
   type AdminBusiness,
   type AdminBusinessDetail,
+  type PendingInvitation,
+  type PlatformAdmin,
 } from '../services/userService'
 import { C, T } from '../styles/theme'
 
@@ -270,6 +272,8 @@ export function AdminView() {
   const [detailError, setDetailError] = useState('')
   const [inviteError, setInviteError] = useState('')
   const [notice, setNotice] = useState('')
+  const [admins, setAdmins] = useState<PlatformAdmin[]>([])
+  const [adminInvitations, setAdminInvitations] = useState<PendingInvitation[]>([])
 
   const loadBusinesses = useCallback(async () => {
     try {
@@ -284,6 +288,14 @@ export function AdminView() {
   }, [])
 
   useEffect(() => { void loadBusinesses() }, [loadBusinesses])
+
+  const loadAdmins = useCallback(async () => {
+    const [activeAdmins, pending] = await Promise.all([userService.getPlatformAdmins(), userService.getPlatformAdminInvitations()])
+    setAdmins(activeAdmins)
+    setAdminInvitations(pending)
+  }, [])
+
+  useEffect(() => { void loadAdmins().catch(() => undefined) }, [loadAdmins])
 
   async function loadDetail(business: AdminBusiness) {
     try {
@@ -306,8 +318,11 @@ export function AdminView() {
       setInviteError('')
       setNotice('')
       const result = await userService.createInvitation(inviteEmail.trim().toLowerCase(), 'platform_admin')
+      const link = result.registrationToken ? `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(result.registrationToken)}&role=platform_admin&email=${encodeURIComponent(inviteEmail.trim().toLowerCase())}` : ''
+      if (link) await navigator.clipboard.writeText(link)
       setNotice(result.message || 'Invitación de administrador creada.')
       setInviteEmail('')
+      await loadAdmins()
     } catch (cause: unknown) {
       setInviteError(cause instanceof Error ? cause.message : 'No se pudo crear la invitación')
     } finally {
@@ -353,6 +368,12 @@ export function AdminView() {
         </form>
         {notice ? <p role="status" style={{ color: C.lime }}>{notice}</p> : null}
         {inviteError ? <p role="alert" style={{ color: C.red }}>{inviteError}</p> : null}
+      </div>
+
+      <div style={{ ...T.card, marginBottom: 20 }}>
+        <div style={T.sectionTitle}>Administradores con acceso</div>
+        {admins.map(admin => <div key={admin.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8 }}><span>{admin.name} · {admin.email} · {admin.isActive ? 'Activo' : 'Inactivo'}</span><button style={T.btnGhost} onClick={() => userService.updatePlatformAdminStatus(admin.id, !admin.isActive).then(loadAdmins)}>{admin.isActive ? 'Desactivar' : 'Reactivar'}</button></div>)}
+        {adminInvitations.map(invitation => <div key={invitation.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8 }}><span>InvitaciÃ³n pendiente · {invitation.invitedEmail}</span><button style={T.btnGhost} onClick={() => userService.revokePlatformAdminInvitation(invitation.id).then(loadAdmins)}>Revocar</button></div>)}
       </div>
 
       <section>

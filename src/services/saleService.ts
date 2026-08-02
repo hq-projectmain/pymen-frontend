@@ -10,6 +10,9 @@ export interface SaleItem {
 export interface Sale {
     id: string;
     totalPrice: number;
+    subtotal: number;
+    discountPercent: number;
+    discountAmount: number;
     user: { id: string };
     items: SaleItem[];
     createdAt: string;
@@ -48,13 +51,13 @@ export const saleService = {
         return await response.json();
     },
 
-    async createSale(items: CreateSaleItem[], totalPrice: number): Promise<Sale> {
+    async createSale(items: CreateSaleItem[], totalPrice: number, discountPercent = 0): Promise<Sale> {
         const headers = await getAuthHeaders();
 
         const response = await fetch(`${BASE_URL}/sales`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ totalPrice, items }),
+            body: JSON.stringify({ totalPrice, discountPercent, items }),
         });
 
         if (!response.ok) {

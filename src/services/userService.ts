@@ -12,6 +12,7 @@ export interface UserProfile {
     systemRole: SystemRole;
     businessOwnerId?: string | null;
     businessName?: string | null;
+    maxDiscountPercent: number;
 }
 
 export interface RegistrationValidation {
@@ -23,11 +24,21 @@ export interface RegistrationValidation {
 export interface TeamMember {
     id: string;
     name: string;
-    email: string;
+    email?: string;
     systemRole: SystemRole;
     isActive: boolean;
     createdAt: string;
+    fiscalRole?: 'none' | 'operator' | 'admin';
+    maxDiscountPercent?: number;
 }
+
+export interface PendingInvitation {
+    id: string;
+    invitedEmail: string;
+    expiresAt: string;
+}
+
+export interface PlatformAdmin { id: string; name: string; email: string; isActive: boolean; createdAt: string; }
 
 export interface AdminBusiness {
     ownerId: string;
@@ -168,7 +179,7 @@ export const userService = {
         return parseResponse<{ recorded: boolean }>(response, 'No se pudo registrar el acceso');
     },
 
-    async validateRegistration(data: { email: string; systemRole: SystemRole; ownerEmail?: string }): Promise<RegistrationValidation> {
+    async validateRegistration(data: { email: string; systemRole: SystemRole; invitationToken?: string }): Promise<RegistrationValidation> {
         const response = await fetch(`${BASE_URL}/users/registration/validate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -177,7 +188,7 @@ export const userService = {
         return parseResponse<RegistrationValidation>(response, 'No se pudo validar el registro');
     },
 
-    async createInvitation(email: string, role: SystemRole): Promise<{ message: string }> {
+    async createInvitation(email: string, role: SystemRole): Promise<{ message: string; registrationToken?: string }> {
         const headers = await getAuthHeaders();
         const invitationPath = role === 'platform_admin' ? 'platform-admins' : 'employees';
         const response = await fetch(`${BASE_URL}/users/invitations/${invitationPath}`, {
@@ -194,10 +205,55 @@ export const userService = {
         return parseResponse<TeamMember[]>(response, 'No se pudo cargar el equipo');
     },
 
+    async getPendingInvitations(): Promise<PendingInvitation[]> {
+        const headers = await getAuthHeaders();
+        return parseResponse<PendingInvitation[]>(await fetch(`${BASE_URL}/users/invitations/employees`, { headers }), 'No se pudieron cargar las invitaciones');
+    },
+
+    async revokeInvitation(id: string): Promise<void> {
+        const headers = await getAuthHeaders();
+        await parseResponse(await fetch(`${BASE_URL}/users/invitations/${encodeURIComponent(id)}`, { method: 'DELETE', headers }), 'No se pudo revocar la invitacion');
+    },
+
+    async updateTeamStatus(id: string, isActive: boolean): Promise<TeamMember> {
+        const headers = await getAuthHeaders();
+        return parseResponse<TeamMember>(await fetch(`${BASE_URL}/users/team/${id}/status`, { method: 'PATCH', headers, body: JSON.stringify({ isActive }) }), 'No se pudo actualizar el acceso');
+    },
+
+    async updateFiscalRole(id: string, fiscalRole: 'none' | 'operator'): Promise<TeamMember> {
+        const headers = await getAuthHeaders();
+        return parseResponse<TeamMember>(await fetch(`${BASE_URL}/users/team/${id}/fiscal-role`, { method: 'PUT', headers, body: JSON.stringify({ fiscalRole }) }), 'No se pudo actualizar el permiso fiscal');
+    },
+
+    async updateSalesPermissions(id: string, maxDiscountPercent: number): Promise<TeamMember> {
+        const headers = await getAuthHeaders();
+        return parseResponse<TeamMember>(await fetch(`${BASE_URL}/users/team/${id}/sales-permissions`, { method: 'PUT', headers, body: JSON.stringify({ maxDiscountPercent }) }), 'No se pudo actualizar el descuento');
+    },
+
     async getAdminBusinesses(): Promise<AdminBusiness[]> {
         const headers = await getAuthHeaders();
         const response = await fetch(`${BASE_URL}/users/admin/businesses`, { headers });
         return parseResponse<AdminBusiness[]>(response, 'No se pudieron cargar los negocios');
+    },
+
+    async getPlatformAdmins(): Promise<PlatformAdmin[]> {
+        const headers = await getAuthHeaders();
+        return parseResponse<PlatformAdmin[]>(await fetch(`${BASE_URL}/users/admin/platform-admins`, { headers }), 'No se pudieron cargar los administradores');
+    },
+
+    async getPlatformAdminInvitations(): Promise<PendingInvitation[]> {
+        const headers = await getAuthHeaders();
+        return parseResponse<PendingInvitation[]>(await fetch(`${BASE_URL}/users/invitations/platform-admins`, { headers }), 'No se pudieron cargar las invitaciones');
+    },
+
+    async updatePlatformAdminStatus(id: string, isActive: boolean): Promise<PlatformAdmin> {
+        const headers = await getAuthHeaders();
+        return parseResponse<PlatformAdmin>(await fetch(`${BASE_URL}/users/admin/platform-admins/${id}/status`, { method: 'PATCH', headers, body: JSON.stringify({ isActive }) }), 'No se pudo actualizar el administrador');
+    },
+
+    async revokePlatformAdminInvitation(id: string): Promise<void> {
+        const headers = await getAuthHeaders();
+        await parseResponse(await fetch(`${BASE_URL}/users/admin/invitations/${id}`, { method: 'DELETE', headers }), 'No se pudo revocar la invitacion');
     },
 
     async getAdminBusinessDetail(ownerId: string): Promise<AdminBusinessDetail> {

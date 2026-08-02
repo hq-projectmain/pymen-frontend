@@ -161,6 +161,18 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
     }
   }
 
+  async function handleEnableProduction() {
+    if (!window.confirm('Vas a pasar a PRODUCCIÓN. Los próximos comprobantes autorizados serán fiscales reales. ¿Continuar?')) return
+    try {
+      setSaving(true); setError(''); setNotice('')
+      const result = await arcaService.enableProduction()
+      setConfig(result.data); setCredentials(result.data.credentials ?? null)
+      setForm(current => ({ ...current, environment: 'production' }))
+      setNotice('Producción habilitada. Ahora cargá las credenciales específicas de producción y probá la conexión.')
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo habilitar producción') }
+    finally { setSaving(false) }
+  }
+
   async function handleTest() {
     try {
       setTesting(true)
@@ -207,7 +219,7 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Ambiente</label>
-            <select style={selectStyle} value={form.environment} disabled={!isAdmin} onChange={event => setForm(current => ({ ...current, environment: event.target.value as ArcaEnvironment }))}>
+            <select style={selectStyle} value={form.environment} disabled>
               <option value="homologation">Homologación (pruebas)</option>
               <option value="production">Producción (comprobantes reales)</option>
             </select>
@@ -221,6 +233,7 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
         <button style={T.btnPrimary} disabled={!isAdmin || saving} onClick={handleSave}>
           {saving ? 'Guardando...' : 'Guardar datos y activar ARCA'}
         </button>
+        {isAdmin && config?.environment === 'homologation' ? <button style={{ ...T.btnGhost, marginLeft: 10 }} disabled={saving} onClick={handleEnableProduction}>Pasar deliberadamente a producción</button> : null}
       </div>
 
       <div style={{ ...T.card, marginBottom: 16 }}>
@@ -235,6 +248,7 @@ export default function ArcaConfigView({ profile: suppliedProfile }: ArcaConfigV
             <div style={{ ...T.pageSub, lineHeight: 1.7 }}>
               Almacenamiento: {credentials.source === 'encrypted_database' ? 'cifrado y persistente' : 'archivo protegido del servidor'}<br />
               Vencimiento: {formatDate(credentials.validTo)}
+              {credentials.expiresSoon ? <><br /><strong style={{ color: C.red }}>Atención: vence en {credentials.daysUntilExpiry} días. Renovalo antes de facturar.</strong></> : null}
               {credentials.fingerprint && <><br />Huella: …{credentials.fingerprint.slice(-12)}</>}
             </div>
           </div>

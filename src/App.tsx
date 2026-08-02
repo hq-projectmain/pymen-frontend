@@ -92,7 +92,7 @@ function ProfileDropdown({ profile }: { profile: UserProfile }) {
         {open ? (
           <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', background: '#1F232B', border: `1px solid ${C.border}`, borderRadius: 10, minWidth: 180, zIndex: 100, overflow: 'hidden' }}>
             <button onClick={() => openProfile('profile')} style={{ width: '100%', background: 'transparent', border: 'none', color: C.white, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>Mi perfil</button>
-            {isOwner ? <button onClick={() => openProfile('team')} style={{ width: '100%', background: 'transparent', border: 'none', borderTop: `1px solid ${C.border}`, color: C.white, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>Equipo</button> : null}
+            {profile.systemRole !== 'platform_admin' ? <button onClick={() => openProfile('team')} style={{ width: '100%', background: 'transparent', border: 'none', borderTop: `1px solid ${C.border}`, color: C.white, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>Equipo</button> : null}
             {isOwner ? <button onClick={() => openProfile('arca')} style={{ width: '100%', background: 'transparent', border: 'none', borderTop: `1px solid ${C.border}`, color: C.lime, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>ARCA</button> : null}
             <button onClick={() => authService.logout()} style={{ width: '100%', background: 'transparent', border: 'none', borderTop: `1px solid ${C.border}`, color: C.red, padding: '11px 16px', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>Cerrar sesión</button>
           </div>
@@ -101,16 +101,16 @@ function ProfileDropdown({ profile }: { profile: UserProfile }) {
 
       {showModal ? (
         <Modal title="Mi cuenta" width={profileTab === 'profile' ? 520 : 900} onClose={() => setShowModal(false)}>
-          {isOwner ? (
+          {profile.systemRole !== 'platform_admin' ? (
             <div role="tablist" aria-label="Secciones de la cuenta" style={{ display: 'flex', gap: 8, borderBottom: `1px solid ${C.border}`, paddingBottom: 12, marginBottom: 20 }}>
               <button role="tab" aria-selected={profileTab === 'profile'} style={profileTab === 'profile' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('profile')}>Mi perfil</button>
               <button role="tab" aria-selected={profileTab === 'team'} style={profileTab === 'team' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('team')}>Equipo</button>
-              <button role="tab" aria-selected={profileTab === 'arca'} style={profileTab === 'arca' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('arca')}>ARCA</button>
+              {isOwner ? <button role="tab" aria-selected={profileTab === 'arca'} style={profileTab === 'arca' ? T.btnPrimary : T.btnGhost} onClick={() => setProfileTab('arca')}>ARCA</button> : null}
             </div>
           ) : null}
 
           {profileTab === 'arca' && isOwner ? <ArcaConfigView profile={profile} /> : null}
-          {profileTab === 'team' && isOwner ? <TeamView /> : null}
+          {profileTab === 'team' ? <TeamView canManage={isOwner} /> : null}
           {profileTab === 'profile' ? (
             <>
               <div style={{ marginBottom: 16 }}>
@@ -182,7 +182,7 @@ function AuthenticatedApp() {
 
 function ProtectedApp() {
   const { user, loading } = useAuth()
-  const [authView, setAuthView] = useState<'login' | 'register'>('login')
+  const [authView, setAuthView] = useState<'login' | 'register'>(() => new URLSearchParams(window.location.search).has('invite') ? 'register' : 'login')
   if (loading) return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: C.black, color: C.white }}>Cargando...</div>
   if (!user) return authView === 'login' ? <LoginView goToRegister={() => setAuthView('register')} /> : <RegisterView goToLogin={() => setAuthView('login')} />
   return <AuthenticatedApp />

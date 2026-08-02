@@ -10,6 +10,9 @@ export interface ArcaCredentialStatus {
   validFrom: string | null
   validTo: string | null
   updatedAt: string | null
+  daysUntilExpiry: number | null
+  expiresSoon: boolean
+  expired: boolean
 }
 
 export interface ArcaConfig {
@@ -117,6 +120,11 @@ export const arcaService = {
   }),
 
   activate: () => request<{ is_active: boolean }>('/arca/activate', { method: 'POST' }),
+
+  enableProduction: () => request<{ message: string; data: ArcaConfig }>('/arca/config/enable-production', {
+    method: 'POST',
+    body: JSON.stringify({ confirmation: 'HABILITAR_PRODUCCION' }),
+  }),
 
   testConnection: () => request<Record<string, unknown>>('/arca/test-connection'),
 

@@ -9,7 +9,7 @@ export const authService = {
         });
     },
 
-    async register(email: string, password: string, name: string, role: SystemRole, ownerEmail?: string, businessName?: string) {
+    async register(email: string, password: string, name: string, role: SystemRole, invitationToken?: string, businessName?: string) {
         return await supabase.auth.signUp({
             email,
             password,
@@ -17,7 +17,7 @@ export const authService = {
                 data: {
                     name,
                     system_role: role,
-                    owner_email: ownerEmail || undefined,
+                    invitation_token: invitationToken || undefined,
                     business_name: businessName || undefined,
                 },
             },
